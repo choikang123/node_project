@@ -1,0 +1,7 @@
+node_modules/
+.env          # 환경 변수 파일
+.DS_Store     # macOS 시스템 파일
+dist/         # 빌드 폴더
+*.log         # 로그 파일
+package.json
+package-lock.json
