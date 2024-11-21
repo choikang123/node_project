@@ -103,4 +103,7 @@ body {
   color: #333;
 }
 
-.book-card p
+.book-card p {
+  font-size: 0.9rem;
+  color: #777;
+}
