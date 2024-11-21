@@ -3,27 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Book Search</title>
+  <title>도서 리뷰 앱</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h1 class="title">📚 Search Books</h1>
+  <div id="loginSection" class="container">
+    <h1 class="title">📚 로그인</h1>
+    <form id="loginForm" class="login-form">
+      <input type="text" id="loginUsername" placeholder="아이디" required>
+      <input type="password" id="loginPassword" placeholder="비밀번호" required>
+      <button type="submit">로그인</button>
+    </form>
+    <p>회원가입이 필요하신가요? <a href="#" id="showSignup">회원가입</a></p>
+  </div>
+
+  <div id="signupSection" class="container" style="display: none;">
+    <h1 class="title">📚 회원가입</h1>
+    <form id="signupForm" class="signup-form">
+      <input type="text" id="signupUsername" placeholder="아이디" required>
+      <input type="password" id="signupPassword" placeholder="비밀번호" required>
+      <button type="submit">회원가입</button>
+    </form>
+    <p>이미 계정이 있으신가요? <a href="#" id="showLogin">로그인</a></p>
+  </div>
+
+  <div id="searchSection" class="container" style="display: none;">
+    <h1 class="title">📚 도서 검색</h1>
+    <button id="logoutButton" class="logout-button">로그아웃</button>
     <form id="searchForm" class="search-form">
-      <input 
-        type="text" 
-        id="query" 
-        class="search-input" 
-        placeholder="Enter book title" 
-        required>
-      <button 
-        type="submit" 
-        class="search-button">
-        Search
-      </button>
+      <input type="text" id="query" class="search-input" placeholder="도서 제목을 입력하세요" required>
+      <button type="submit" class="search-button">검색</button>
     </form>
     <div id="results" class="results"></div>
   </div>
+
   <script src="script.js"></script>
 </body>
 </html>
