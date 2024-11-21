@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Search</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">📚 Search Books</h1>
+    <form id="searchForm" class="search-form">
+      <input 
+        type="text" 
+        id="query" 
+        class="search-input" 
+        placeholder="Enter book title" 
+        required>
+      <button 
+        type="submit" 
+        class="search-button">
+        Search
+      </button>
+    </form>
+    <div id="results" class="results"></div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
