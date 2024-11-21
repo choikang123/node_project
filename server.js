@@ -1,154 +1,103 @@
+require('dotenv').config();
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
-const axios = require('axios');
-const jwt = require('jsonwebtoken'); // 사용자 인증을 위한 JWT 사용
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = 3000;
-const KAKAO_API_KEY = '1e8e1cf6caf17cc74db5ce1bf5f6c319';
-const JWT_SECRET = 'your_jwt_secret'; // JWT 토큰용 시크릿 키
+const JWT_SECRET = process.env.JWT_SECRET;
 
+// MongoDB 연결
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB Atlas'))
+  .catch((err) => console.error('Failed to connect to MongoDB Atlas:', err));
+
+// Middleware
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
-// 유틸리티: 리뷰 데이터 로드 및 저장
-const loadReviews = () => {
-    const reviewsPath = path.join(__dirname, 'data/reviews.json');
-    if (!fs.existsSync(reviewsPath)) fs.writeFileSync(reviewsPath, '{}');
-    return JSON.parse(fs.readFileSync(reviewsPath, 'utf-8'));
-};
+// MongoDB 모델 정의
+const User = mongoose.model('User', new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+}));
 
-const saveReviews = (reviews) => {
-    const reviewsPath = path.join(__dirname, 'data/reviews.json');
-    fs.writeFileSync(reviewsPath, JSON.stringify(reviews, null, 2));
-};
+const Review = mongoose.model('Review', new mongoose.Schema({
+  bookId: { type: String, required: true },
+  review: { type: String, required: true },
+  username: { type: String, required: true },
+}));
 
-// 사용자 데이터 로드
-const loadUsers = () => {
-    const usersPath = path.join(__dirname, 'data/users.json');
-    if (!fs.existsSync(usersPath)) fs.writeFileSync(usersPath, '{}');
-    return JSON.parse(fs.readFileSync(usersPath, 'utf-8'));
-};
+// 회원가입
+app.post('/api/signup', async (req, res) => {
+  const { username, password } = req.body;
 
-const saveUsers = (users) => {
-    const usersPath = path.join(__dirname, 'data/users.json');
-    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
-};
+  if (!username || !password) {
+    return res.status(400).json({ error: '아이디와 비밀번호는 필수입니다.' });
+  }
 
-// 사용자 인증 미들웨어
-const authenticate = (req, res, next) => {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
-    try {
-        const user = jwt.verify(token, JWT_SECRET);
-        req.user = user;
-        next();
-    } catch {
-        res.status(401).json({ error: 'Invalid token' });
-    }
-};
-
-// 사용자 회원가입
-app.post('/api/signup', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password)
-        return res.status(400).json({ error: 'Username and password are required' });
-
-    const users = loadUsers();
-    if (users[username]) return res.status(400).json({ error: 'Username already exists' });
-
-    users[username] = { password };
-    saveUsers(users);
-    res.json({ message: 'User registered successfully' });
-});
-
-// 사용자 로그인
-app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
-    const users = loadUsers();
-
-    if (users[username]?.password === password) {
-        const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token });
+  try {
+    const newUser = new User({ username, password });
+    await newUser.save();
+    res.json({ message: '회원가입 성공!' });
+  } catch (err) {
+    if (err.code === 11000) {
+      res.status(400).json({ error: '아이디가 이미 존재합니다.' });
     } else {
-        res.status(401).json({ error: 'Invalid credentials' });
+      res.status(500).json({ error: '회원가입에 실패했습니다.' });
     }
+  }
 });
 
-// 도서 검색 (필터링 포함)
-app.get('/api/search', async (req, res) => {
-    const { query, page = 1, author, publisher } = req.query;
-    if (!query) return res.status(400).json({ error: 'Query is required' });
+// 로그인
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
 
-    try {
-        const response = await axios.get('https://dapi.kakao.com/v3/search/book', {
-            headers: { Authorization: `KakaoAK ${KAKAO_API_KEY}` },
-            params: { query, page, size: 10 },
-        });
-
-        let books = response.data.documents;
-
-        // 필터링 로직
-        if (author) books = books.filter((book) => book.authors.includes(author));
-        if (publisher) books = books.filter((book) => book.publisher === publisher);
-
-        res.json({ books, meta: response.data.meta });
-    } catch (error) {
-        console.error(error.message);
-        res.status(500).json({ error: 'Failed to fetch books' });
-    }
-});
-
-// 즐겨찾기 추가/삭제
-app.post('/api/favorites', authenticate, (req, res) => {
-    const { bookId } = req.body;
-    if (!bookId) return res.status(400).json({ error: 'Book ID is required' });
-
-    const userFavoritesPath = path.join(__dirname, `data/favorites_${req.user.username}.json`);
-    const favorites = fs.existsSync(userFavoritesPath)
-        ? JSON.parse(fs.readFileSync(userFavoritesPath, 'utf-8'))
-        : {};
-
-    if (favorites[bookId]) {
-        delete favorites[bookId];
-        message = 'Book removed from favorites';
-    } else {
-        favorites[bookId] = true;
-        message = 'Book added to favorites';
+  try {
+    const user = await User.findOne({ username, password });
+    if (!user) {
+      return res.status(401).json({ error: '아이디 또는 비밀번호가 잘못되었습니다.' });
     }
 
-    fs.writeFileSync(userFavoritesPath, JSON.stringify(favorites, null, 2));
-    res.json({ message });
+    const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ error: '로그인에 실패했습니다.' });
+  }
 });
 
-// 감상평 CRUD
-app.put('/api/reviews/:bookId', authenticate, (req, res) => {
-    const { bookId } = req.params;
-    const { review } = req.body;
+// 리뷰 저장
+app.post('/api/reviews', async (req, res) => {
+  const { bookId, review } = req.body;
+  const token = req.headers.authorization?.split(' ')[1];
 
-    if (!review) return res.status(400).json({ error: 'Review is required' });
+  if (!token) {
+    return res.status(401).json({ error: '로그인이 필요합니다.' });
+  }
 
-    const reviews = loadReviews();
-    reviews[bookId] = review;
-
-    saveReviews(reviews);
-    res.json({ message: 'Review updated successfully' });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const newReview = new Review({ bookId, review, username: decoded.username });
+    await newReview.save();
+    res.json({ message: '리뷰가 저장되었습니다.' });
+  } catch (err) {
+    res.status(500).json({ error: '리뷰 저장에 실패했습니다.' });
+  }
 });
 
-app.delete('/api/reviews/:bookId', authenticate, (req, res) => {
-    const { bookId } = req.params;
-    const reviews = loadReviews();
+// 리뷰 조회
+app.get('/api/reviews/:bookId', async (req, res) => {
+  const { bookId } = req.params;
 
-    if (!reviews[bookId]) return res.status(404).json({ error: 'Review not found' });
-
-    delete reviews[bookId];
-    saveReviews(reviews);
-    res.json({ message: 'Review deleted successfully' });
+  try {
+    const reviews = await Review.find({ bookId });
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ error: '리뷰 조회에 실패했습니다.' });
+  }
 });
 
 // 서버 시작
 app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
