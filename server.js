@@ -3,18 +3,22 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const jwt = require('jsonwebtoken');
+const cors = require('cors');
+const axios = require('axios');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // MongoDB 연결
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch((err) => console.error('Failed to connect to MongoDB Atlas:', err));
 
 // Middleware
+app.use(cors());
 app.use(bodyParser.json());
+app.use(express.static('public'));
 
 // MongoDB 모델 정의
 const User = mongoose.model('User', new mongoose.Schema({
@@ -96,6 +100,79 @@ app.get('/api/reviews/:bookId', async (req, res) => {
     res.status(500).json({ error: '리뷰 조회에 실패했습니다.' });
   }
 });
+
+// 책 검색 API
+app.get('/api/search', async (req, res) => {
+  const query = req.query.query;
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: '로그인이 필요합니다.' });
+  }
+
+  try {
+    jwt.verify(token, JWT_SECRET);
+
+    // 카카오 책 검색 API 호출
+    const response = await axios.get('https://dapi.kakao.com/v3/search/book', {
+      headers: { Authorization: `KakaoAK ${process.env.KAKAO_API_KEY}` },
+      params: { query },
+    });
+
+    const books = response.data.documents.map((doc) => ({
+      id: doc.isbn, // ISBN을 고유 ID로 사용
+      title: doc.title,
+      authors: doc.authors,
+      thumbnail: doc.thumbnail || '/default-thumbnail.jpg',
+      publisher: doc.publisher,
+      datetime: doc.datetime,
+      contents: doc.contents,
+    }));
+
+    res.json({ books });
+  } catch (err) {
+    console.error('책 검색 오류:', err);
+    res.status(500).json({ error: '책 검색에 실패했습니다.' });
+  }
+});
+
+// 책 상세보기 API
+app.get('/api/book/:bookId', async (req, res) => {
+  const { bookId } = req.params;
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: '로그인이 필요합니다.' });
+  }
+
+  try {
+    jwt.verify(token, JWT_SECRET);
+
+    // 카카오 책 검색 API 호출
+    const response = await axios.get('https://dapi.kakao.com/v3/search/book', {
+      headers: { Authorization: `KakaoAK ${process.env.KAKAO_API_KEY}` },
+      params: { query: bookId }, // ISBN으로 검색
+    });
+
+    const book = response.data.documents[0]; // 첫 번째 결과 사용
+    if (!book) {
+      return res.status(404).json({ error: '책 정보를 찾을 수 없습니다.' });
+    }
+
+    res.json({
+      title: book.title,
+      authors: book.authors,
+      publisher: book.publisher,
+      thumbnail: book.thumbnail || '/default-thumbnail.jpg',
+      datetime: book.datetime,
+      contents: book.contents,
+    });
+  } catch (err) {
+    console.error('책 상세보기 오류:', err);
+    res.status(500).json({ error: '책 상세 정보를 가져오는 데 실패했습니다.' });
+  }
+});
+
 
 // 서버 시작
 app.listen(PORT, () => {

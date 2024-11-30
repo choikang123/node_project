@@ -232,3 +232,82 @@ body {
 #toggleFavorite:hover {
   background-color: #e0a800;
 }
+
+/* Book Details Page */
+#bookDetails {
+  max-width: 600px;
+  margin: 20px auto;
+  text-align: left;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+#bookDetails h2 {
+  font-size: 1.5rem;
+  color: #333;
+}
+
+#bookDetails p {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 10px;
+}
+
+/* Review Form */
+#reviewForm {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#reviewForm textarea {
+  width: 100%;
+  height: 100px;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+#reviewForm button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  color: #fff;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#reviewForm button:hover {
+  background-color: #0056b3;
+}
+
+#deleteReview {
+  background-color: #dc3545;
+}
+
+#deleteReview:hover {
+  background-color: #c82333;
+}
+
+/* Favorite Button */
+#toggleFavorite {
+  margin-top: 10px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  color: #fff;
+  background-color: #ffc107;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#toggleFavorite:hover {
+  background-color: #e0a800;
+}

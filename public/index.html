@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- 로그인 섹션 -->
   <div id="loginSection" class="container">
     <h1 class="title">📚 로그인</h1>
     <form id="loginForm" class="login-form">
@@ -17,6 +18,7 @@
     <p>회원가입이 필요하신가요? <a href="#" id="showSignup">회원가입</a></p>
   </div>
 
+  <!-- 회원가입 섹션 -->
   <div id="signupSection" class="container" style="display: none;">
     <h1 class="title">📚 회원가입</h1>
     <form id="signupForm" class="signup-form">
@@ -27,6 +29,7 @@
     <p>이미 계정이 있으신가요? <a href="#" id="showLogin">로그인</a></p>
   </div>
 
+  <!-- 검색 섹션 -->
   <div id="searchSection" class="container" style="display: none;">
     <h1 class="title">📚 도서 검색</h1>
     <button id="logoutButton" class="logout-button">로그아웃</button>
@@ -35,6 +38,20 @@
       <button type="submit" class="search-button">검색</button>
     </form>
     <div id="results" class="results"></div>
+  </div>
+
+  <!-- 상세보기 섹션 -->
+  <div id="detailsSection" class="container" style="display: none;">
+    <h1 class="title">📖 도서 상세 정보</h1>
+    <button id="backToSearch" class="back-button">검색으로 돌아가기</button>
+    <div id="bookDetails">
+      <h2 id="bookTitle">로딩 중...</h2>
+      <img id="bookThumbnail" src="" alt="책 이미지" style="display: none;" />
+      <p id="bookAuthors">저자: </p>
+      <p id="bookPublisher">출판사: </p>
+      <p id="bookDate">출판일: </p>
+      <p id="bookDescription">책 설명: </p>
+    </div>
   </div>
 
   <script src="script.js"></script>
