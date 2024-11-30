@@ -68,6 +68,16 @@ function showDetailsPage(book) {
   } else {
     thumbnail.style.display = 'none';
   }
+
+  // Load comments for the book
+  loadComments(book.id);
+
+  // Add event listener for comment submission
+  const commentForm = document.getElementById('commentForm');
+  commentForm.onsubmit = (e) => {
+    e.preventDefault();
+    saveComment(book.id);
+  };
 }
 
 // Back to search page
@@ -189,4 +199,67 @@ function displaySearchResults(books) {
     card.appendChild(button);
     resultsDiv.appendChild(card);
   });
+}
+
+// Load comments for a book
+async function loadComments(bookId) {
+  try {
+    const response = await fetch(`/api/comments/${bookId}`);
+    if (response.ok) {
+      const comments = await response.json();
+      const commentsDiv = document.getElementById('comments');
+      commentsDiv.innerHTML = '';
+
+      comments.forEach((comment) => {
+        const commentDiv = document.createElement('div');
+        commentDiv.className = 'comment';
+
+        const user = document.createElement('p');
+        user.className = 'username';
+        user.textContent = `작성자: ${comment.username}`;
+
+        const content = document.createElement('p');
+        content.className = 'content';
+        content.textContent = comment.comment;
+
+        const date = document.createElement('p');
+        date.className = 'date';
+        date.textContent = `작성일: ${new Date(comment.createdAt).toLocaleString()}`;
+
+        commentDiv.appendChild(user);
+        commentDiv.appendChild(content);
+        commentDiv.appendChild(date);
+        commentsDiv.appendChild(commentDiv);
+      });
+    }
+  } catch (err) {
+    console.error('댓글 로드 실패:', err);
+  }
+}
+
+// Handle comment submission
+async function saveComment(bookId) {
+  const commentInput = document.getElementById('newComment');
+  const comment = commentInput.value;
+
+  try {
+    const response = await fetch('/api/comments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ bookId, comment }),
+    });
+
+    if (response.ok) {
+      commentInput.value = '';
+      alert('댓글이 저장되었습니다.');
+      loadComments(bookId);
+    } else {
+      alert('댓글 저장에 실패했습니다.');
+    }
+  } catch (err) {
+    console.error('댓글 저장 실패:', err);
+  }
 }

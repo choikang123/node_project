@@ -26,30 +26,23 @@ const User = mongoose.model('User', new mongoose.Schema({
   password: { type: String, required: true },
 }));
 
-const Review = mongoose.model('Review', new mongoose.Schema({
+const Comment = mongoose.model('Comment', new mongoose.Schema({
   bookId: { type: String, required: true },
-  review: { type: String, required: true },
+  comment: { type: String, required: true },
   username: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
 }));
 
 // 회원가입
 app.post('/api/signup', async (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ error: '아이디와 비밀번호는 필수입니다.' });
-  }
-
   try {
     const newUser = new User({ username, password });
     await newUser.save();
     res.json({ message: '회원가입 성공!' });
   } catch (err) {
-    if (err.code === 11000) {
-      res.status(400).json({ error: '아이디가 이미 존재합니다.' });
-    } else {
-      res.status(500).json({ error: '회원가입에 실패했습니다.' });
-    }
+    res.status(400).json({ error: '아이디가 이미 존재합니다.' });
   }
 });
 
@@ -70,57 +63,21 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// 리뷰 저장
-app.post('/api/reviews', async (req, res) => {
-  const { bookId, review } = req.body;
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: '로그인이 필요합니다.' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const newReview = new Review({ bookId, review, username: decoded.username });
-    await newReview.save();
-    res.json({ message: '리뷰가 저장되었습니다.' });
-  } catch (err) {
-    res.status(500).json({ error: '리뷰 저장에 실패했습니다.' });
-  }
-});
-
-// 리뷰 조회
-app.get('/api/reviews/:bookId', async (req, res) => {
-  const { bookId } = req.params;
-
-  try {
-    const reviews = await Review.find({ bookId });
-    res.json(reviews);
-  } catch (err) {
-    res.status(500).json({ error: '리뷰 조회에 실패했습니다.' });
-  }
-});
-
-// 책 검색 API
+// 책 검색
 app.get('/api/search', async (req, res) => {
   const query = req.query.query;
   const token = req.headers.authorization?.split(' ')[1];
 
-  if (!token) {
-    return res.status(401).json({ error: '로그인이 필요합니다.' });
-  }
-
   try {
     jwt.verify(token, JWT_SECRET);
 
-    // 카카오 책 검색 API 호출
     const response = await axios.get('https://dapi.kakao.com/v3/search/book', {
       headers: { Authorization: `KakaoAK ${process.env.KAKAO_API_KEY}` },
       params: { query },
     });
 
     const books = response.data.documents.map((doc) => ({
-      id: doc.isbn, // ISBN을 고유 ID로 사용
+      id: doc.isbn,
       title: doc.title,
       authors: doc.authors,
       thumbnail: doc.thumbnail || '/default-thumbnail.jpg',
@@ -131,14 +88,13 @@ app.get('/api/search', async (req, res) => {
 
     res.json({ books });
   } catch (err) {
-    console.error('책 검색 오류:', err);
     res.status(500).json({ error: '책 검색에 실패했습니다.' });
   }
 });
 
-// 책 상세보기 API
-app.get('/api/book/:bookId', async (req, res) => {
-  const { bookId } = req.params;
+// 댓글 저장
+app.post('/api/comments', async (req, res) => {
+  const { bookId, comment } = req.body;
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
@@ -146,33 +102,26 @@ app.get('/api/book/:bookId', async (req, res) => {
   }
 
   try {
-    jwt.verify(token, JWT_SECRET);
-
-    // 카카오 책 검색 API 호출
-    const response = await axios.get('https://dapi.kakao.com/v3/search/book', {
-      headers: { Authorization: `KakaoAK ${process.env.KAKAO_API_KEY}` },
-      params: { query: bookId }, // ISBN으로 검색
-    });
-
-    const book = response.data.documents[0]; // 첫 번째 결과 사용
-    if (!book) {
-      return res.status(404).json({ error: '책 정보를 찾을 수 없습니다.' });
-    }
-
-    res.json({
-      title: book.title,
-      authors: book.authors,
-      publisher: book.publisher,
-      thumbnail: book.thumbnail || '/default-thumbnail.jpg',
-      datetime: book.datetime,
-      contents: book.contents,
-    });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const newComment = new Comment({ bookId, comment, username: decoded.username });
+    await newComment.save();
+    res.json({ message: '댓글이 저장되었습니다.' });
   } catch (err) {
-    console.error('책 상세보기 오류:', err);
-    res.status(500).json({ error: '책 상세 정보를 가져오는 데 실패했습니다.' });
+    res.status(500).json({ error: '댓글 저장에 실패했습니다.' });
   }
 });
 
+// 댓글 조회
+app.get('/api/comments/:bookId', async (req, res) => {
+  const { bookId } = req.params;
+
+  try {
+    const comments = await Comment.find({ bookId }).sort({ createdAt: -1 });
+    res.json(comments);
+  } catch (err) {
+    res.status(500).json({ error: '댓글 조회에 실패했습니다.' });
+  }
+});
 
 // 서버 시작
 app.listen(PORT, () => {
